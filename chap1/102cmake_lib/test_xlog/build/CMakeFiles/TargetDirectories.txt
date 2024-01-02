@@ -1,3 +1,0 @@
-/Users/wangfiox/DOCs/cmakeLearn/notes/chap1/102cmake_lib/test_xlog/build/CMakeFiles/test_xlog.dir
-/Users/wangfiox/DOCs/cmakeLearn/notes/chap1/102cmake_lib/test_xlog/build/CMakeFiles/edit_cache.dir
-/Users/wangfiox/DOCs/cmakeLearn/notes/chap1/102cmake_lib/test_xlog/build/CMakeFiles/rebuild_cache.dir

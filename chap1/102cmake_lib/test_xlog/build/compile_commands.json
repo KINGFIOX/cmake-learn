@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/Users/wangfiox/DOCs/cmakeLearn/notes/chap1/102cmake_lib/test_xlog/build",
-  "command": "/usr/bin/clang++ -I/Users/wangfiox/DOCs/cmakeLearn/notes/chap1/102cmake_lib/test_xlog/../xlog -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk -o CMakeFiles/test_xlog.dir/test_xlog.cc.o -c /Users/wangfiox/DOCs/cmakeLearn/notes/chap1/102cmake_lib/test_xlog/test_xlog.cc",
-  "file": "/Users/wangfiox/DOCs/cmakeLearn/notes/chap1/102cmake_lib/test_xlog/test_xlog.cc",
-  "output": "CMakeFiles/test_xlog.dir/test_xlog.cc.o"
-}
-]

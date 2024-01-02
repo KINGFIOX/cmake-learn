@@ -1,237 +1,570 @@
-# 入门
+# chap2 - cmake 常用功能
 
-### 头文件作用
+## cmake 注释
 
-函数名称 和 参数类型（用于索引查找函数地址）
+有 两种 注释的方法
 
-## 生成静态库
-
-就是 “生成构建文件”，如果 cpp 源码有错误的话，生成构建文件是没什么问题的。
-只有在 “编译” 的时候 cpp 源码的错误 才会暴露出来。
+1. 行注释
 
 ```cmake
-# ./xlog/CMakeLists.txt
-# 先要限定最低版本
-cmake_minimum_required(VERSION 3.20)
-
-# 定义项目名称
-project(xlog)
-
-# 添加库，添加库的时候，不用xlog.o之类的，编译器会补充
-add_library(xlog STATIC xlog.cc xlog.h)
+# 这是一行注释
 ```
 
-### cmake -S （生成构建文件）
+2. 括号注释
+
+这种括号注释是：3.10 版本以上才支持的
+
+```cmake
+#[[中间的注释]]
+```
+
+## cmake message
+
+```cmake
+message("参数1")
+message("参数p1" "参数p2" "p3" 123 测试)
+```
+
+（cmake 中，字符串 加 引号 不是必须的）
+
+输出结果：
 
 ```sh
-cmake -S . -B build
+参数1
+参数p1参数p2p3123测试
 ```
 
-`cmake -S .`会搜索当前目录下的 cmakelists.txt
+可见，message 中，是将参数直接 拼接 在了一起
 
-`-B build`表示：构建文件会在`./build/`目录下生成
+### message 日志级别
 
-vscode 的 cmake 工具，应该就是帮我们完成了`cmake -S . -B build`这个步骤
+#### 1. 不同的日志级别
 
-构建文件有很多：
+TIPS：输出到不同的控制台 stdout（句柄是 1） 或 stderr（句柄是 2）( tlpi 中有 )
+
+1. FATAL_ERROR --> 停止 cmake 运行和生成（进程退出，生成退出） --> stderr
+2. SEND_ERROR --> cmake 继续运行，生成跳过（不生成 add_executable、add_library）（进程不退出，生成退出） --> stderr
+3. WARNING --> stderr
+4. (none)（没设置级别） or NOTICE --> stderr
+5. STATUS --> 项目用户可能感兴趣的信息（比方说，哪个库编译成功了）
+6. VERBOSE --> 针对项目用户的 详细 信息
+7. DEBUG --> 给开发人员看的
+8. TRACE --> 比 DEBUG 更详细
+
+（需要 团队共同约定）
+
+#### 2. message 设置 日志级别
+
+1. 例子
+
+```cmake
+mesage(FATALE_ERROR "this is FATAL_ERROR")
+```
+
+2. (none) or NOTICE
+
+下面两种效果是一样的
+
+- (none)
+
+mesage("this is NOTICE")
+
+- NOTICE
+
+mesage(NOTICE "this is NOTICE")
+
+#### 3. 生成构建文件的时候，指定日志级别
 
 ```sh
-~/DOCs/cmakeLearn/notes/chap1/102cmake_lib/xlog/build » tree
-.
-├── CMakeCache.txt
-├── CMakeFiles
-│   ├── 3.28.1
-│   │   ├── CMakeCCompiler.cmake
-│   │   ├── CMakeCXXCompiler.cmake
-│   │   ├── CMakeDetermineCompilerABI_C.bin
-│   │   ├── CMakeDetermineCompilerABI_CXX.bin
-│   │   ├── CMakeSystem.cmake
-│   │   ├── CompilerIdC
-│   │   │   ├── CMakeCCompilerId.c
-│   │   │   ├── CMakeCCompilerId.o
-│   │   │   └── tmp
-│   │   └── CompilerIdCXX
-│   │       ├── CMakeCXXCompilerId.cpp
-│   │       ├── CMakeCXXCompilerId.o
-│   │       └── tmp
-│   ├── CMakeConfigureLog.yaml
-│   ├── CMakeDirectoryInformation.cmake
-│   ├── CMakeScratch
-│   ├── Makefile.cmake
-│   ├── Makefile2
-│   ├── TargetDirectories.txt
-│   ├── cmake.check_cache
-│   ├── pkgRedirects
-│   ├── progress.marks
-│   └── xlog.dir
-│       ├── DependInfo.cmake
-│       ├── build.make
-│       ├── cmake_clean.cmake
-│       ├── cmake_clean_target.cmake
-│       ├── compiler_depend.make
-│       ├── compiler_depend.ts
-│       ├── depend.make
-│       ├── flags.make
-│       ├── link.txt
-│       └── progress.make
-├── Makefile
-└── cmake_install.cmake
+cmake -S . -B build --log-level=VERBOSE
 ```
 
-### cmake --build （编译）
+或者是
+
+```cmake
+set(CMAKE_VERBOSE_MAKEFILE ON)
+```
+
+#### 4. 重定向
+
+1. 默认的重定向
+
+默认只会有 stdout 的重定向
 
 ```sh
-build > cmake --build .
+cmake -S . -B build --log-level=VERBOSE > message.txt
 ```
 
-如果在 build 目录下，可以直接`cmake --build .`
+这样，只是把我们的 stdout 输出到了 message.txt 中。
+但是 stderr 依然是输出到了 控制台
 
-如果在项目目录下，需要指定目录`cmake --build build`（虽然上面也是指定目录）
-
-于是乎，可以看到生成了一个`libxlog.a`文件
-
-## 调用静态库
-
-这个是最原始的方式，也就是已知项目路径的情况下，调用静态库
-
-```cmake
-# ./test_xlog/CMakeLists.txt
-
-# 最低版本
-cmake_minimum_required(VERSION 3.20)
-
-project(test_xlog)
-
-# 添加头文件路径，相当于是-i，../xlog 下有 xlog.h文件
-include_directories("../xlog")
-
-# 指定库查找路径，到那边去找。以当前cmakelists.txt的相对路径
-link_directories("../xlog/build")
-
-add_executable(test_xlog test_xlog.cc)
-
-# 制定加载的库，找哪一个库
-# 这个xlog库不用libxlog.a，只用原本的名字即可
-# 注意一下，需要是生成可执行文件之后指定库
-# 毕竟编译顺序是：先生成a.o，再链接的。还得看那本书《程序员的自我修养》
-target_link_libraries(test_xlog xlog)
-```
-
-### 添加头文件路径 include_directories
-
-```cmake
-# 添加头文件路径，相当于是 gcc -i，../xlog 下有 xlog.h文件
-include_directories("../xlog")
-```
-
-### 指定库的搜索路径
-
-```cmake
-# 指定库查找路径，到那边去找。以当前cmakelists.txt的相对路径
-link_directories("../xlog/build")
-```
-
-### 生成可执行文件后，链接静态库
-
-```cmake
-# 制定加载的库，找哪一个库
-# 这个xlog库不用libxlog.a，只用原本的名字即可
-# 注意一下，需要是生成可执行文件之后指定库
-# 毕竟编译顺序是：先生成a.o，再链接的。还得看那本书《程序员的自我修养》
-target_link_libraries(test_xlog xlog)
-```
-
-## 动态库 + 库与调用在同一目录下
-
-查看包含的动态库。
-
-linux 下有命令：`ldd ./a.out`
-
-mac 也有命令：`otool -L`
+2. stderr 重定向到 stdout
 
 ```sh
-~/DOCs/cmakeLearn/notes/chap1/102cmake_lib/build » otool -L ./test_xlog
-./test_xlog:
-        @rpath/libxlog.dylib (compatibility version 0.0.0, current version 0.0.0)
-        /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1600.157.0)
-        /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1336.61.1)
-        /opt/homebrew/opt/llvm/lib/libunwind.1.dylib (compatibility version 1.0.0, current version 1.0.0)
+cmake -S . -B build --log-level=VERBOSE > message.txt 2>&1
 ```
 
-在同一个文件中，既有"动态库"，又有"可执行文件"
+### message reporting checks 查找库日志
+
+查找库，3 个选项：
+
+CHECK_START、CHECK_PASS、CHECK_FAIL
+
+#### message 缩进（有涉及到变量）
+
+1. 设置缩进
 
 ```cmake
-# CMakeLists.txt
-
-# 指定最低版本
-cmake_minimum_required(VERSION 3.20)
-
-project(xlog)
-
-# 头文件，这个头文件路径是一个全局的，xlog可以看见，test_xlog也可以看见
-include_directories("./xlog")
-
-# 生成动态库
-add_library(xlog SHARED ./xlog/xlog.cc ./xlog/xlog.h)
-
-# 生成可执行文件
-add_executable(test_xlog ./test_xlog/test_xlog.cc)
-
-# 链接
-target_link_libraries(test_xlog xlog)
+set(CMAKE_MESSAGE_INDENT "--")
 ```
 
-需要注意的是：这个`inclu_directories`是全局的。
+2. 取消缩进
 
-这个`include_directories`就关系到：这个`test_xlog`中的`#include "xlog.h"`。
+```cmake
+set(CMAKE_MESSAGE_INDENT "")
+```
 
-## windows 下的 动态库
+## cmake 变量（初步）
+
+### 基本语法
+
+1. 设置变量用`set(变量名 值1)`
+
+可以有很多个值，有多个值的话，就变成了 list（暂时不会涉及）
+
+2. 重复 set
+
+重复 set 会覆盖之前的值
+
+3. 释放变量
+
+`unset(变量名)`
+
+（这里暂时不会涉及到：缓存变量）
+
+### 变量使用
+
+#### 1. 解引用
+
+```cmake
+${变量名}
+```
+
+这个相当于是直接将：变量名 --> 替换成了 值
+
+#### 2. 变量是可以嵌套的
+
+```cmake
+${${变量名}}
+```
+
+例如：
+
+```cmake
+set(VAR1 "this is var1")
+set(VAR2 "VAR1")  # cmake中的基本类型就是字符串，也算是脚本语言的特性吧
+message("VAR2 = ${VAR2}")
+message("VAR2 = ${${VAR2}}")
+```
+
+#### 3. 变量名大小写敏感
+
+#### 4. 变量是有作用域的（后面再说）
+
+#### 5. 在字符串中直接使用
+
+```cmake
+message("VAR1 in string ${VAR1})
+```
+
+#### 6. 字符串转义
+
+```cmake
+message("VAR1 in string \${VAR1})
+```
+
+### 让 message 输出不同的颜色
+
+\033[1;31;40m --> 1 高亮显示 ; 31 前景色红色 ; 40 背景色红色
+\033[0m --> 0m 表示，取消颜色设置
+
+这里的\033 是 8 进制 ascii（c 语言考过）
+
+上面这两条`\033`是配对的
+
+#### 常见 颜色设置 方法
+
+```cmake
+string(ASCII 27 Esc)
+
+set(R "${Esc}[0;31m")
+set(E "${Esc}[0m")  # 这个0有时候可以省略，因此也可以是：set(E "${ESE}[m")
+
+message("${R}红色内容${E} 默认颜色")
+message("${R}蓝色内容${E} 默认颜色")
+```
+
+这个 string 后面再讲
+
+### cmake 内建变量（built-in variable）
+
+#### 提供信息的变量
+
+PROJECT_NAME
+
+```cmake
+# 1. 提供信息的变量
+add_library(${PROJECT_NAME} ./xlog.h ./xlog.cc)
+```
+
+#### 改变行为的变量
+
+BUILD_SHARED_LIBS <-- 这个变量还是一个 “缓存变量”
+
+add_libray 如果没有设置 static 或者是 shared，
+如果`BUILD_SHARED_LIBS=ON`-->创建 static，否则创建 shared
+
+```cmake
+# 2. 改变行为的变量
+# 注意一下，这个BUILD_SHARED_LIBS是 缓存变量
+set(BUILD_SHARED_LIBS ON)
+```
+
+#### 描述系统的变量
+
+msvc、win32、android、unix
+
+```cmake
+# 3. 描述系统的变量
+message("MSVC=" ${MSVC})
+message("UNIX=" ${UNIX})
+```
+
+#### 控制构建过程的变量
+
+cmake_color_makefile （改变 makefile 的颜色）
+
+这里是：windows 的静态、动态库，调用、被调用
 
 ```cpp
-// xlog.h
-#ifndef XLOG_H
-#define XLOG_H
-
-#ifdef xlog_EXPORT
-    #define XCPP_API --declspec(dllexport)  // 导出xlog类的函数到lib文件中
-#else
-    #define XCPP_API --declspec(dllimport)
-#endif
-
-class XCPP_API XLog {
-public:
-    XLog();
-};
-
-#endif
-```
-
-## unix 下的 动态库
-
-linux 下不认 windows 的 xlog_EXPORT
-
-为了跨平台，可以这么写：
-
-```cpp
-// xlog.h
-#ifndef XLOG_H
-#define XLOG_H
-
-#ifndef _WIN32
-    // 这里是定义为 空
+#ifndef _Win32
     #define XCPP_API
-#else
-    #ifdef xlog_EXPORT
-        #define XCPP_API --declspec(dllexport)  // 导出xlog类的函数到lib文件中
+#else // windows
+    #ifdef xlog_STATIC
+        #define XCPP_API
     #else
-        #define XCPP_API --declspec(dllimport)
+        #ifdef xlog_EXPORTS
+            #define XCPP_API __declspec(dllexport)
+        #else
+            #define XCPP_API __declspec(dllimport)
+        #endif
     #endif
 #endif
-
-class XCPP_API XLog {
-public:
-    XLog();
-};
-
-#endif
 ```
+
+传递宏
+
+```cmake
+# 4. 控制构建过程的变量：输出路径控制
+# CMAKE_COLOR_MAKEFILE是否生成makefile的颜色，默认是ON
+set(CMAKE_COLOR_MAKEFILE OFF)
+
+# 传递变量给C++，静态库
+add_definitions(-Dxlog_STATIC)
+```
+
+## include
+
+比方说：可以搞一个类似于继承的东西，可以继承一个公共的约定，
+生成文件的明明规范之类的。然后就可以在我们新建的项目中 include（继承） 这个 base cmakelists.txt
+
+语法格式：
+
+```cmake
+include(file [OPTIONAL][RESULT_VARIABLE VAR])
+```
+
+如果指定了 optional 选项，那么如果 include 的文件不存在的话，也不会报错。
+
+如果指定了 result_variable 选项，那么 var：1) include 的文件的绝对路径（成功） ; 2) NOTFOUND （失败，没有找到该文件）
+
+### 示例（无 cpp）
+
+一般情况下，将 include 放到 cmake 文件夹下。
+跨文件的 include，可能会出现 变量的作用域 问题
+
+```cmake
+include("./cmake/test_cmake.cmake" OPTIONAL) # 文件不存在不报错
+include("./cmake/test_cmake.cmake" OPTIONAL RESULT_VARIABLE ret) # 看看引用是否成功
+message("RET = ${ret}")
+```
+
+就是有时候，一些`.cmake`是动态生成的，不包含还算是一个正常的事情
+
+## 自动查找所有源码文件和头文件
+
+目的：添加 头文件 和 代码 后不用修改 cmake。
+但是如果是一些需要比较精细的工程，比方说：操作系统内核，
+可能就不会使用自动化。
+
+主要涉及一下两个函数：
+
+### aux_source_directory
+
+（aux 是辅助的意思）
+
+```cmake
+aux_source_directory("./src" LIB_SRCS)
+```
+
+会将 src 路径下所有源码存入 DIR_SRCS，但是不包含头文件
+
+（aux_source_directory 并不会递归的搜索子目录）
+
+cmake 代码示例：
+
+```cmake
+# 108auto_src_h/CMakeLists.txt
+
+#[[ 目录结构
+.
+    CMakeLists.txt
+    main.cc
+    src
+        xlog.cc
+        xthread.cc
+        xtest.c
+    include
+        xlog.h
+        xthread.hpp
+]]
+
+cmake_minimum_required(VERSION 3.20)
+project("auto_src_h")
+
+# 头文件路径
+include_directories("./include")
+
+# 找到.目录下的源码，写入M_SRC
+aux_source_directory("." M_SRC)
+aux_source_directory("./src" SRC)
+
+message("auto = ${M_SRC}")
+message("auto = ${SRC}")
+
+# 创建可执行文件
+add_executable(${PROJECT_NAME} ${M_SRC} ${SRC})
+```
+
+按照这种方式：
+
+1. `include_directories`
+2. `aux_source_directories`
+
+会有一个问题：如果头文件更新了，并不会重新（惰性）。
+但是我们是希望：头文件更新了，重新编译。
+
+解决方案：FILE
+
+```cmake
+cmake_minimum_required(VERSION 3.20)
+project("auto_src_h")
+
+# 头文件路径
+set(INCLUDE_PATH "./include")
+include_directories("${INCLUDE_PATH}")
+
+# 找到.目录下的源码，写入M_SRC
+aux_source_directory("." M_SRC)
+aux_source_directory("./src" SRC)
+
+# 读取所有的头文件，读取.h，.hpp
+file(GLOB H_FILE "{INCLUDE_PATH}/*.h*")
+
+# 打印日志
+message("M_SRC = ${M_SRC}")
+message("SRC = ${SRC}")
+message("H_FILE = ${H_FILE}")
+
+# 创建可执行文件
+add_executable(${PROJECT_NAME} ${M_SRC} ${SRC} ${H_FILE})
+```
+
+### FILE
+
+例如：
+
+```cmake
+FILE(GLOB H_FILE "${INCLUDE_PATH}/xcpp/*.h")
+FILE(GLOB H_FILE_i "${INCLUDE_PATH}/*.h")
+```
+
+## cmake 命令实现程序的 分步生成
+
+```sh
+~/DOCs/cmakeLearn/notes/chap2/108auto_src_h/build (main) » cmake --build . --target help
+The following are some of the valid targets for this Makefile:
+... all (the default if no target is provided)
+... clean
+... depend
+... edit_cache
+... rebuild_cache
+... auto_src_h
+... main.o
+... main.i
+... main.s
+... src/xlog.o
+... src/xlog.i
+... src/xlog.s
+... src/xtest.o
+... src/xtest.i
+... src/xtest.s
+... src/xthread.o
+... src/xthread.i
+... src/xthread.s
+```
+
+比方说，想要得到一个.cpp 的预处理文件，那么`cmake --build . --target main.i`（当前目录是 build），
+那么就会得到`main.i`这个预处理以后的文件
+
+
+## cmake 调试，打印生成的具体指令
+
+两种方式，可以打印生成更具体的信息
+
+1. 传参
+
+```sh
+cmake -S . -B build --log-level=VERBOSE
+```
+
+2. 设置全局变量
+
+```cmake
+set(CMAKE_VERBOSE_MAKEFILE ON)
+```
+
+在生成可执行文件的时候，查看更加详细的信息
+
+```sh
+cmake --build . -v
+```
+
+最后这个`-v`就是 verbose 的意思
+
+## cmake 设置输出路径 add_subdirectory
+
+### 1. 代码准备
+
+```sh
+~/DOCs/cmakeLearn/notes/chap2/109cmake_out (main*) » tree
+.
+├── CMakeLists.txt
+├── test_xlog
+│   ├── CMakeLists.txt
+│   └── test_xlog.cc
+└── xlog
+    ├── xlog.cc
+    └── xlog.h
+```
+
+### 2. 库输出路径
+
+```cmake
+# 头文件搜索路径
+include_directories("./xlog")
+
+# 动态库 输出路径，但是这里却是在./build/lib这个目录下生成
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "./lib")
+
+# 生成动态库
+add_library(xlog SHARED xlog/xlog.cc)
+```
+
+默认路径是`./build/lib`，但是我们应该是想要输出到`./lib`这个路径下。
+
+想法：
+
+我们可以知道cmakelists.txt的路径，可以搞一个相对于cmakelists.txt的路径
+
+#### cmakelists.txt 路径
+
+```cmake
+# cmakelists.txt路径
+message("CMAKE_CURRENT_LIST_DIR = ${CMAKE_CURRENT_LIST_DIR}")
+```
+
+可以得到cmakelists.txt的绝对路径
+
+```sh
+CMAKE_CURRENT_LIST_DIR = /Users/wangfiox/DOCs/cmakeLearn/notes/chap2/109cmake_out
+```
+
+### 3. 归档输出路径
+
+#### 1. 库的输出路径
+
+```cmake
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/lib")
+```
+
+#### 2. 同理，可以设置：可执行文件的输出路径
+
+```cmake
+# 可执行程序 输出路径
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/bin")
+```
+
+#### 3. 归档输出
+
+```cmake
+# 归档输出
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/lib")
+```
+
+#### windows
+
+在windows下，lib下会输出两种 可执行文件，release和debug
+
+和上面一样，windows编译静态库还是需要设置一些东西：
+
+```cmake
+set(BUILD_SHARED_LIBS OFF)
+add_definitions(-Dxlog_STATIC)
+```
+
+```cmake
+# 输出可执行文件，dll动态库，pdb调试文件
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/bin")
+```
+
+```cmake
+# 归档输出路径：静态库.lib
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/lib")
+```
+
+### 4. 遗留问题
+
+就是上面的：
+
+```cmake
+set(BUILD_SHARED_LIBS OFF)
+add_definitions(-Dxlog_STATIC)
+```
+
+这个相当于是全局的参数。如果我们有下面的代码：
+
+```cmake
+add_library(xlog STATIC xlog/xlog.cc)
+add_library(xlog SHARED xlog/xlog.cc)
+```
+
+既想要生成静态库，又想要生成动态库。
+但是动态库也会接受到参数`add_definitions(-Dxlog_STATIC)`。
+这就有点麻烦。
+
+## cmake add_subdirectory
+
+就是我们一个大项目，会有不同的小项目组成，
+而且也不可能写一个大的cmakelists.txt，这样是很难维护的
+
