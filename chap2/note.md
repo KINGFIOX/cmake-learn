@@ -134,6 +134,8 @@ set(CMAKE_MESSAGE_INDENT "")
 
 `unset(变量名)`
 
+（这里暂时不会涉及到：缓存变量）
+
 ### 变量使用
 
 #### 1. 解引用
@@ -392,3 +394,41 @@ FILE(GLOB H_FILE_i "${INCLUDE_PATH}/*.h")
 ```
 
 ## cmake 命令实现程序的 分步生成
+
+```sh
+~/DOCs/cmakeLearn/notes/chap2/108auto_src_h/build (main) » cmake --build . --target help
+The following are some of the valid targets for this Makefile:
+... all (the default if no target is provided)
+... clean
+... depend
+... edit_cache
+... rebuild_cache
+... auto_src_h
+... main.o
+... main.i
+... main.s
+... src/xlog.o
+... src/xlog.i
+... src/xlog.s
+... src/xtest.o
+... src/xtest.i
+... src/xtest.s
+... src/xthread.o
+... src/xthread.i
+... src/xthread.s
+```
+
+比方说，想要得到一个.cpp 的预处理文件，那么`cmake --build . --target main.i`（当前目录是 build），
+那么就会得到`main.i`这个预处理以后的文件
+
+### 突发奇想：反汇编 与 编译过程中的汇编 的区别
+
+`gcc -S` 和 `objdump -d` 都可以用来生成汇编代码，但它们的工作方式和输出的内容有一些不同。
+
+1. `gcc -S`：这个命令会将源代码（如 C 或 C++）编译成汇编代码，但不会进行链接。输出的是源代码级别的汇编，包含了源代码中的函数和变量名。
+
+2. `objdump -d`：这个命令会将已经编译和链接过的二进制文件（如 ELF 文件）反汇编成汇编代码。输出的是机器级别的汇编，通常不包含源代码中的函数和变量名，而是包含了内存地址和机器指令。
+
+所以，`gcc -S` 更适合于理解源代码是如何被编译成汇编的，而 `objdump -d` 更适合于理解已经编译和链接过的程序的机器级别的行为。
+
+## cmake 调试，打印生成的具体指令
