@@ -1,0 +1,3 @@
+/Users/wangfiox/DOCs/cmakeLearn/notes/chap2/108auto_src_h/build/CMakeFiles/auto_src_h.dir
+/Users/wangfiox/DOCs/cmakeLearn/notes/chap2/108auto_src_h/build/CMakeFiles/edit_cache.dir
+/Users/wangfiox/DOCs/cmakeLearn/notes/chap2/108auto_src_h/build/CMakeFiles/rebuild_cache.dir

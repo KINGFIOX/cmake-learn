@@ -264,3 +264,131 @@ set(CMAKE_COLOR_MAKEFILE OFF)
 # 传递变量给C++，静态库
 add_definitions(-Dxlog_STATIC)
 ```
+
+## include
+
+比方说：可以搞一个类似于继承的东西，可以继承一个公共的约定，
+生成文件的明明规范之类的。然后就可以在我们新建的项目中 include（继承） 这个 base cmakelists.txt
+
+语法格式：
+
+```cmake
+include(file [OPTIONAL][RESULT_VARIABLE VAR])
+```
+
+如果指定了 optional 选项，那么如果 include 的文件不存在的话，也不会报错。
+
+如果指定了 result_variable 选项，那么 var：1) include 的文件的绝对路径（成功） ; 2) NOTFOUND （失败，没有找到该文件）
+
+### 示例（无 cpp）
+
+一般情况下，将 include 放到 cmake 文件夹下。
+跨文件的 include，可能会出现 变量的作用域 问题
+
+```cmake
+include("./cmake/test_cmake.cmake" OPTIONAL) # 文件不存在不报错
+include("./cmake/test_cmake.cmake" OPTIONAL RESULT_VARIABLE ret) # 看看引用是否成功
+message("RET = ${ret}")
+```
+
+就是有时候，一些`.cmake`是动态生成的，不包含还算是一个正常的事情
+
+## 自动查找所有源码文件和头文件
+
+目的：添加 头文件 和 代码 后不用修改 cmake。
+但是如果是一些需要比较精细的工程，比方说：操作系统内核，
+可能就不会使用自动化。
+
+主要涉及一下两个函数：
+
+### aux_source_directory
+
+（aux 是辅助的意思）
+
+```cmake
+aux_source_directory("./src" LIB_SRCS)
+```
+
+会将 src 路径下所有源码存入 DIR_SRCS，但是不包含头文件
+
+（aux_source_directory 并不会递归的搜索子目录）
+
+cmake 代码示例：
+
+```cmake
+# 108auto_src_h/CMakeLists.txt
+
+#[[ 目录结构
+.
+    CMakeLists.txt
+    main.cc
+    src
+        xlog.cc
+        xthread.cc
+        xtest.c
+    include
+        xlog.h
+        xthread.hpp
+]]
+
+cmake_minimum_required(VERSION 3.20)
+project("auto_src_h")
+
+# 头文件路径
+include_directories("./include")
+
+# 找到.目录下的源码，写入M_SRC
+aux_source_directory("." M_SRC)
+aux_source_directory("./src" SRC)
+
+message("auto = ${M_SRC}")
+message("auto = ${SRC}")
+
+# 创建可执行文件
+add_executable(${PROJECT_NAME} ${M_SRC} ${SRC})
+```
+
+按照这种方式：
+
+1. `include_directories`
+2. `aux_source_directories`
+
+会有一个问题：如果头文件更新了，并不会重新（惰性）。
+但是我们是希望：头文件更新了，重新编译。
+
+解决方案：FILE
+
+```cmake
+cmake_minimum_required(VERSION 3.20)
+project("auto_src_h")
+
+# 头文件路径
+set(INCLUDE_PATH "./include")
+include_directories("${INCLUDE_PATH}")
+
+# 找到.目录下的源码，写入M_SRC
+aux_source_directory("." M_SRC)
+aux_source_directory("./src" SRC)
+
+# 读取所有的头文件，读取.h，.hpp
+file(GLOB H_FILE "{INCLUDE_PATH}/*.h*")
+
+# 打印日志
+message("M_SRC = ${M_SRC}")
+message("SRC = ${SRC}")
+message("H_FILE = ${H_FILE}")
+
+# 创建可执行文件
+add_executable(${PROJECT_NAME} ${M_SRC} ${SRC} ${H_FILE})
+```
+
+### FILE
+
+例如：
+
+```cmake
+FILE(GLOB H_FILE "${INCLUDE_PATH}/xcpp/*.h")
+FILE(GLOB H_FILE_i "${INCLUDE_PATH}/*.h")
+```
+
+## cmake 命令实现程序的 分步生成
