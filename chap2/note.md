@@ -79,6 +79,12 @@ mesage(NOTICE "this is NOTICE")
 cmake -S . -B build --log-level=VERBOSE
 ```
 
+或者是
+
+```cmake
+set(CMAKE_VERBOSE_MAKEFILE ON)
+```
+
 #### 4. 重定向
 
 1. 默认的重定向
@@ -421,14 +427,144 @@ The following are some of the valid targets for this Makefile:
 比方说，想要得到一个.cpp 的预处理文件，那么`cmake --build . --target main.i`（当前目录是 build），
 那么就会得到`main.i`这个预处理以后的文件
 
-### 突发奇想：反汇编 与 编译过程中的汇编 的区别
-
-`gcc -S` 和 `objdump -d` 都可以用来生成汇编代码，但它们的工作方式和输出的内容有一些不同。
-
-1. `gcc -S`：这个命令会将源代码（如 C 或 C++）编译成汇编代码，但不会进行链接。输出的是源代码级别的汇编，包含了源代码中的函数和变量名。
-
-2. `objdump -d`：这个命令会将已经编译和链接过的二进制文件（如 ELF 文件）反汇编成汇编代码。输出的是机器级别的汇编，通常不包含源代码中的函数和变量名，而是包含了内存地址和机器指令。
-
-所以，`gcc -S` 更适合于理解源代码是如何被编译成汇编的，而 `objdump -d` 更适合于理解已经编译和链接过的程序的机器级别的行为。
 
 ## cmake 调试，打印生成的具体指令
+
+两种方式，可以打印生成更具体的信息
+
+1. 传参
+
+```sh
+cmake -S . -B build --log-level=VERBOSE
+```
+
+2. 设置全局变量
+
+```cmake
+set(CMAKE_VERBOSE_MAKEFILE ON)
+```
+
+在生成可执行文件的时候，查看更加详细的信息
+
+```sh
+cmake --build . -v
+```
+
+最后这个`-v`就是 verbose 的意思
+
+## cmake 设置输出路径 add_subdirectory
+
+### 1. 代码准备
+
+```sh
+~/DOCs/cmakeLearn/notes/chap2/109cmake_out (main*) » tree
+.
+├── CMakeLists.txt
+├── test_xlog
+│   ├── CMakeLists.txt
+│   └── test_xlog.cc
+└── xlog
+    ├── xlog.cc
+    └── xlog.h
+```
+
+### 2. 库输出路径
+
+```cmake
+# 头文件搜索路径
+include_directories("./xlog")
+
+# 动态库 输出路径，但是这里却是在./build/lib这个目录下生成
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "./lib")
+
+# 生成动态库
+add_library(xlog SHARED xlog/xlog.cc)
+```
+
+默认路径是`./build/lib`，但是我们应该是想要输出到`./lib`这个路径下。
+
+想法：
+
+我们可以知道cmakelists.txt的路径，可以搞一个相对于cmakelists.txt的路径
+
+#### cmakelists.txt 路径
+
+```cmake
+# cmakelists.txt路径
+message("CMAKE_CURRENT_LIST_DIR = ${CMAKE_CURRENT_LIST_DIR}")
+```
+
+可以得到cmakelists.txt的绝对路径
+
+```sh
+CMAKE_CURRENT_LIST_DIR = /Users/wangfiox/DOCs/cmakeLearn/notes/chap2/109cmake_out
+```
+
+### 3. 归档输出路径
+
+#### 1. 库的输出路径
+
+```cmake
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/lib")
+```
+
+#### 2. 同理，可以设置：可执行文件的输出路径
+
+```cmake
+# 可执行程序 输出路径
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/bin")
+```
+
+#### 3. 归档输出
+
+```cmake
+# 归档输出
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/lib")
+```
+
+#### windows
+
+在windows下，lib下会输出两种 可执行文件，release和debug
+
+和上面一样，windows编译静态库还是需要设置一些东西：
+
+```cmake
+set(BUILD_SHARED_LIBS OFF)
+add_definitions(-Dxlog_STATIC)
+```
+
+```cmake
+# 输出可执行文件，dll动态库，pdb调试文件
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/bin")
+```
+
+```cmake
+# 归档输出路径：静态库.lib
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/lib")
+```
+
+### 4. 遗留问题
+
+就是上面的：
+
+```cmake
+set(BUILD_SHARED_LIBS OFF)
+add_definitions(-Dxlog_STATIC)
+```
+
+这个相当于是全局的参数。如果我们有下面的代码：
+
+```cmake
+add_library(xlog STATIC xlog/xlog.cc)
+add_library(xlog SHARED xlog/xlog.cc)
+```
+
+既想要生成静态库，又想要生成动态库。
+但是动态库也会接受到参数`add_definitions(-Dxlog_STATIC)`。
+这就有点麻烦。
+
+## cmake add_subdirectory
+
+就是我们一个大项目，会有不同的小项目组成，
+而且也不可能写一个大的cmakelists.txt，这样是很难维护的
+
