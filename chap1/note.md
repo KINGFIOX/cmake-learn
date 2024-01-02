@@ -31,6 +31,8 @@ cmake -S . -B build
 
 `-B build`表示：构建文件会在`./build/`目录下生成
 
+vscode 的 cmake 工具，应该就是帮我们完成了`cmake -S . -B build`这个步骤
+
 构建文件有很多：
 
 ```sh

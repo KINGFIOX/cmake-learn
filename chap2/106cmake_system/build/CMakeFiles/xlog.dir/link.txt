@@ -1,0 +1,1 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk -dynamiclib -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/llvm/lib -o libxlog.dylib -install_name @rpath/libxlog.dylib CMakeFiles/xlog.dir/xlog.cc.o 
