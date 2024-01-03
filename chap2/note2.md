@@ -252,7 +252,6 @@ cmake_parse_arguments(<prefix> <options> <one_value_keywords>
 - `<multi_value_keywords>` 多个值的变量
 - `_UNPARSED_ARGUMENTS` 传递了错误的值
 - `_KEYWORDS_MISSING_VALUES` 没有设定值
-- `code`
 
 ##### 前缀 与 options
 
@@ -404,3 +403,160 @@ my_parse(
 ```
 
 ## cmake 函数
+
+1. 函数的参数是变量
+2. 函数内部设置的普通变量，作用域只在函数内
+3. 函数可以用 return 返回
+
+### function 参数是变量
+
+函数的参数是变量，因此可以在`if`和`foreach`中使用，不用`${}`
+
+```cmake
+function(func1 arg1 arg2)
+    message("IN function func1")
+    message("arg1 = ${arg1}")
+    message("arg2 = ${arg2}")
+
+    if(arg1)  # 不用${}
+        message("arg1 == TRUE")
+    else()
+        message("arg1 != FALSE")
+    endif()
+
+    foreach(var IN LISTS arg1)  # 不用 ${}
+        message("var = ${var}")
+    endforeach(var IN LISTS arg1)
+endfunction(func1 arg1 arg2)
+
+func1("1;2;3;4;5" 2)
+```
+
+### 作用域
+
+cmake 的函数，在函数内部是可以访问 父作用域 的变量，但是不能修改
+
+如果 父作用域变量 与 形参 同名，优先使用 形参（shallow）
+
+不能修改父作用域的 变量，如果 同名，相当于是创建了一个新的变量
+
+```cmake
+function(func_var arg1)
+    message("in func_var ${arg1}")
+    message("var1 = ${var1}")
+    set(var1 "func var")
+endfunction(func_var arg1)
+
+set(var1 "main1")
+set(arg1 "main arg1")
+func_var(123)
+message("var1 = ${var1}")
+```
+
+输出：
+
+```sh
+[cmake] in func_var 123
+[cmake] var1 = main1
+[cmake] var1 = main1
+```
+
+### return
+
+宏中不能使用`return`，这样就代表的是全局作用域的`return`（因为宏是直接复制的）
+
+cmake 中的 return，只是为了让过程块提前结束，
+并不会真的返回某个值
+
+function 如果要返回某一个值，可以：
+
+```cmake
+function(my_function result_var)
+    set(${result_var} "my result" PARENT_SCOPE)
+endfunction()
+```
+
+macro 如果要返回一个值，可以设置一个 ret 变量
+
+### parent_scope
+
+好奇，既然这个可以扩大到 父作用域，
+那么子目录的 parent_scope 能不能到 父作用域 呢？
+
+1. 可以访问子目录中的函数
+
+```cmake
+add_subdirectory("./sub1")
+func_sub(123)
+```
+
+2. 父作用域（注意一下）
+
+子目录下：
+
+```cmake
+# ./sub1/cmakelists.txt
+cmake_minimum_required(VERSION 3.20)
+project(sub1)
+
+function(func_sub1)
+    math(EXPR sub1_var "${sub1_var} + 1")
+    message("in func_sub1: sub1_var = ${sub1_var}")
+    set(sub1_var ${sub1_var} PARENT_SCOPE)
+endfunction(func_sub1)
+
+func_sub1()
+func_sub1()
+message("in sub1: sub1_var = ${sub1_var}")
+```
+
+主目录下：
+
+```cmake
+# ./cmakelists.txt
+cmake_minimum_required(VERSION 3.22)
+project(cmake_macro)
+add_subdirectory("./sub1")
+message("===========================")
+func_sub1()
+message("in main: sub1_var = ${sub1_var}")
+```
+
+子目录没有将 sub1_var 扩大作用域，
+因此 父目录 与 子目录 的 sub1_var 实际上是不同的内存的
+
+输出为：
+
+```sh
+[cmake] in func_sub1: sub1_var = 1
+[cmake] in func_sub1: sub1_var = 2
+[cmake] in sub1: sub1_var = 2
+[cmake] ===========================
+[cmake] in func_sub1: sub1_var = 1
+[cmake] in main: sub1_var = 1
+```
+
+但是如果我们将子目录的最下面加上这句话
+
+```cmake
+set(sub1_var ${sub1_var} PARENT_SCOPE)
+```
+
+相当于是：扩大了作用域，这时候，输出为：
+
+```sh
+[cmake] in func_sub1: sub1_var = 1
+[cmake] in func_sub1: sub1_var = 2
+[cmake] in sub1: sub1_var = 2
+[cmake] ===========================
+[cmake] in func_sub1: sub1_var = 3
+[cmake] in main: sub1_var = 3
+```
+
+这个时候，是 sub1_var 是同一个内存
+
+### include
+
+如果是`include`子目录，而不是`add_subdirectory`，
+结果是不一样的，因为`include`是直接将子目录复制过来了，
+相当于就是：头文件展开的复制
