@@ -1054,5 +1054,3 @@ message("message = ${arr}")
 list(SORT arr COMPARE NATURAL)
 message("arr = ${arr}")
 ```
-
-## cmake foreach 循环
