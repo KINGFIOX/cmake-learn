@@ -1,4 +1,4 @@
-# chap3 - cmake 主要语法
+# chap2 - cmake 主要语法
 
 ## if 控制流程
 
