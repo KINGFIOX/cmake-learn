@@ -612,3 +612,447 @@ message("out = ${out}")
 ```sh
 [cmake] out = 0x19
 ```
+
+## 字符串
+
+### 语法
+
+#### 操作
+
+##### 查找
+
+语法：
+
+```cmake
+string(FIND <string> <substring> <out-var> [...])
+```
+
+示例：
+
+```cmake
+# 需求：取出begin和end之间的内容
+set(STR1 "xxx begin test cmake string end xxxxxx")
+# 查找开头字符串
+set(BSTR "begin")
+# 在 str1 中，查找 bstr 位置，存入b
+string(FIND ${STR1} ${BSTR} b)
+message("FIND ${BSTR} pos ${b}")
+```
+
+输出：
+
+```sh
+# 注意：cmake位置，以0开始
+[cmake] FIND begin pos 4
+```
+
+示例：截取字符串
+
+```cmake
+string(FIND ${STR1} "end" e)
+message("FIND end pos ${e}")
+# 去掉begin字符位置
+# 获取字符串长度
+string(LENGTH ${BSTR} size)
+math(EXPR b "${b}+${size}")
+message("b = ${b}")
+math(EXPR length "${e}-${b}")
+message("length = ${length}")
+# 获取子串
+string(SUBSTRING ${STR1} ${b} ${length} substr)
+message("substr = [${substr}]")
+# 去掉空格
+string(STRIP ${substr} substr)
+message("substr = [${substr}]")
+# 转成大写
+string(TOUPPER ${substr} substr)
+message("substr = [${substr}]")
+```
+
+输出：
+
+```sh
+[cmake] FIND begin pos 4
+[cmake] FIND end pos 28
+[cmake] b = 9
+[cmake] length = 19
+[cmake] substr = [ test cmake string ]
+[cmake] substr = [test cmake string]
+[cmake] substr = [TEST CMAKE STRING]
+```
+
+##### 追加、替换
+
+```cmake
+# 追加
+string(APPEND substr "append01" "append02")
+message("substr = [${substr}]")
+# 替换
+string(REPLACE "append" "REPLACE" substr ${substr})
+message("substr = [${substr}]")
+```
+
+输出：
+
+```sh
+[cmake] substr = [TEST CMAKE STRINGappend01append02]
+[cmake] substr = [TEST CMAKE STRINGREPLACE01REPLACE02]
+```
+
+##### 正则表达式匹配
+
+```cmake
+string(REGEX MATCH "[A-Z]+[0-9]+" output ${substr})
+message("regex output = [${output}]")
+```
+
+输出：
+
+```sh
+[cmake] regex output = [STRINGREPLACE01]
+```
+
+#### json
+
+cmake 中，多行字符串：
+
+```cmake
+set(
+    multiStr
+    [=[
+
+    ]=]
+)
+```
+
+语法：
+
+```cmake
+JSON
+  string(JSON <out-var> [ERROR_VARIABLE <error-var>]
+         {GET | TYPE | LENGTH | REMOVE}
+         <json-string> <member|index> [<member|index> ...])
+  string(JSON <out-var> [ERROR_VARIABLE <error-var>]
+         MEMBER <json-string>
+         [<member|index> ...] <index>)
+  string(JSON <out-var> [ERROR_VARIABLE <error-var>]
+         SET <json-string>
+         <member|index> [<member|index> ...] <value>)
+  string(JSON <out-var> [ERROR_VARIABLE <error-var>]
+         EQUAL <json-string1> <json-string2>)
+```
+
+示例：
+
+```cmake
+set(
+    tjson
+    [=[
+        {
+            "webs" : {
+                "web" : [
+                    {"name": "cmake", "url":"cmake.org.cn"},
+                    {"name": "ffmpeg", "url":"ffmpeg.club"}
+                ]
+            }
+        }
+    ]=]
+)
+message(${tjson})
+# 访问webs.web[0].name
+string(JSON var ERROR_VARIABLE evar GET ${tjson} webs web 0 name)
+message("var = ${var}")
+```
+
+- 如果有错误：
+
+1. 没有数据成员：evar = webs web2 not found
+
+2. 如果是 json 的格式错误：
+
+```sh
+[cmake] evar = failed parsing json string: * Line 5, Column 27
+[cmake]   Missing ',' or ']' in array declaration
+```
+
+- 如果没有错误
+
+```sh
+evar = NOTFOUND
+```
+
+##### json 数组的长度
+
+```cmake
+# 读取json数组长度
+string(
+    JSON
+    web_count
+    ERROR_VARIABLE evar
+    LENGTH
+    ${tjson} webs web
+)
+message("JSON LENGTH = ${web_count}")
+```
+
+##### json 的增加与修改（set）
+
+```cmake
+string(
+    JSON
+    modified_json
+    ERROR_VARIABLE evar
+    SET
+    # 下标是2
+    ${tjson} webs web 2 [=[
+        {"name":"cpp", "url":"cppreference.com"}
+    ]=]
+)
+message("modified_json = ${modified_json}")
+```
+
+输出：
+
+```sh
+[cmake] modified_json = {
+[cmake]   "webs" :
+[cmake]   {
+[cmake]     "web" :
+[cmake]     [
+[cmake]       {
+[cmake]         "name" : "cmake",
+[cmake]         "url" : "cmake.org.cn"
+[cmake]       },
+[cmake]       {
+[cmake]         "name" : "ffmpeg",
+[cmake]         "url" : "ffmpeg.club"
+[cmake]       },
+[cmake]       {
+[cmake]         "name" : "cpp",
+[cmake]         "url" : "cppreference.com"
+[cmake]       }
+[cmake]     ]
+[cmake]   }
+[cmake] }
+```
+
+##### json 的删除
+
+```cmake
+string(
+    JSON
+    remove_json
+    ERROR_VARIABLE evar
+    REMOVE
+    ${tjson} webs web 1
+)
+message("removed_json = ${remove_json}")
+```
+
+删除：
+
+```sh
+[cmake] removed_json = {
+[cmake]   "webs" :
+[cmake]   {
+[cmake]     "web" :
+[cmake]     [
+[cmake]       {
+[cmake]         "name" : "cmake",
+[cmake]         "url" : "cmake.org.cn"
+[cmake]       }
+[cmake]     ]
+[cmake]   }
+[cmake] }
+```
+
+## list 基础用法
+
+### list 变量初始化 及 长度
+
+cmake 中存储的所有值都是字符串，有`;`间隔符的字符串被拆分成列表
+
+```cmake
+set(src "a" "b" "c" "d;e")
+message("src = ${src}") # a;b;c;d;e
+list(LENGTH src len)
+message("src length = ${len}")
+```
+
+输出：
+
+```sh
+[cmake] src = a;b;c;d;e
+[cmake] src length = 5
+```
+
+### list 追加写入
+
+```cmake
+# list追加
+list(APPEND src "g")
+list(APPEND src "h;i")
+message("src = ${src}")
+list(LENGTH src len)
+message("src length = ${len}")
+```
+
+### 对 list 的访问
+
+```cmake
+# list访问 下标访问：0 1 2 3 ... -1 -2 -3 ...
+list(GET src 1 var)
+message("GET src 1 = ${var}")
+list(GET src -1 var)
+message("GET src -1 = ${var}")
+```
+
+输出：
+
+```sh
+[cmake] GET src 1 = b
+[cmake] GET src -1 = i
+```
+
+### list 拼接，或者是用不同的方式分隔
+
+```cmake
+list(JOIN src "|" var)
+message("JOIN src = ${var}")
+```
+
+输出：
+
+```sh
+[cmake] JOIN src = a|b|c|d|e|g|h|i
+```
+
+### 取其中一部分数组
+
+```cmake
+list(SUBLIST src 0 3 var)
+message("SUBLIST ${var}")
+```
+
+输出：
+
+```sh
+[cmake] SUBLIST a;b;c
+```
+
+### 查找
+
+```cmake
+list(FIND src "d" var)
+message("FIND ${var}")
+```
+
+输出：
+
+```sh
+[cmake] FIND 3
+```
+
+### 插入
+
+```cmake
+# 插入节点 a;b;c;d;e;f;g;h;i
+list(INSERT src 4 "d1")
+list(INSERT src 2 "b1")
+message("insert src ${src}")
+```
+
+输出：
+
+```sh
+[cmake] insert src a;b;b1;c;d;d1;e;g;h;i
+```
+
+### 删除元素
+
+```cmake
+list(REMOVE_ITEM src "b")
+message("remove src = ${src}")
+```
+
+输出：
+
+```sh
+[cmake] remove src = a;b1;c;d;d1;e;g;h;i
+```
+
+这种`remove_item`是：删除所有的匹配的
+
+### 修改
+
+通过`find`，然后删除指定位置，再插入指定位置
+
+### list 队列操作方式
+
+#### 出队
+
+这里的 list 是双向队列
+
+```cmake
+# 后端出队
+# src = a;b1;c;d;d1;e;g;h;i
+list(POP_BACK src var)
+message("pop_back ${var}")
+message("pop_back ${src}")
+```
+
+同理，前端出队是：`pop_front`
+
+输出：
+
+```sh
+[cmake] pop_back i
+[cmake] pop_back a;b1;c;d;d1;e;g;h
+```
+
+#### 入队
+
+1. 前端：直接`insert 0`即可
+
+2. 后端：直接`append`即可
+
+### 去重
+
+```cmake
+# 去重
+set(rsrc "1;2;3;3;2;1;1;2;3;4;5;6;7")
+message("rsrc before = ${rsrc}")
+list(REMOVE_DUPLICATES rsrc)
+message("rsrc after = ${rsrc}")
+```
+
+输出：
+
+```sh
+[cmake] rsrc before = 1;2;3;3;2;1;1;2;3;4;5;6;7
+[cmake] rsrc after = 1;2;3;4;5;6;7
+```
+
+### list 数据排序
+
+```cmake
+set(arr "8;12;5;7;9;3")
+list(SORT arr)
+message("message = ${arr}")
+```
+
+输出：
+
+```sh
+[cmake] arr = 12;3;5;7;8;9
+```
+
+这里有问题，为什么 12 在 3 前面，因此这里是按照：字典序
+
+```cmake
+# 指定排序方式：自然数排序
+list(SORT arr COMPARE NATURAL)
+message("arr = ${arr}")
+```
+
+## cmake foreach 循环
