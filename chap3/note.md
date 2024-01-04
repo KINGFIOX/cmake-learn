@@ -49,8 +49,8 @@
 
 2. 字符串比较
 
-- `$<STREQUAL:string1, string2>`
-- `$<EQUAL:value1, value2>`
+- `$<STREQUAL:string1, string2>` 字符串的比较
+- `$<EQUAL:value1, value2>` 数字的比较
 
 3. 变量查询
 
@@ -67,7 +67,20 @@
 
 2. 字符串转换
 
+- `$<LOWER_CASE:str>`大小写
+-
+
 3. 变量查询
+
+- `$<CONFIG>`
+- `$<PLATFORM_ID>`
+
+4. 目标相关的查询
+
+- `$<TARGET_NAME_IF_EXISTS:tgt>`
+- `$<TARGET_FILE:tgt>` 目标文件的 绝对路径
+- `$<TARGET_PDB_FILE:tgt>`
+- `$<TARGET_PROPERTY:tgt.prop>`
 
 ### 调试
 
@@ -113,7 +126,7 @@ int main(void)
 
 下面有两种方式：
 
-1. 利用 cmake 的错误来查看
+1. 利用 cmake 的错误来查看（这种方式，还是有些操蛋了）
 
 ```cmake
 # 利用cmake的错误来查看  --> cmake error in cmakelists.txt
@@ -166,8 +179,107 @@ add_custom_target(
 
 输出：
 
+使用自定义命令
+
+```sh
+~/DOCs/cmakeLearn/notes/chap3/301expr (main*) » cmake --build build --target gen
+```
+
 ```sh
 ~/DOCs/cmakeLearn/notes/chap3/301expr (main*) » cmake --build build --target gen
 STATIC=1
 Built target gen
 ```
+
+### 变量查询
+
+1. config
+
+```cmake
+target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC
+    "$<CONFIG>"
+)
+```
+
+输出：
+
+（如果是 windows，默认会有 Debug，也会有 release）
+
+```sh
+[cmake] CMake Error in CMakeLists.txt:
+[cmake]   Found relative path while evaluating include directories of "expr":
+[cmake]
+[cmake]     "Debug"
+```
+
+2. 系统平台
+
+```cmake
+target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC
+    "$<PLATFORM_ID>"
+)
+```
+
+输出：
+
+```sh
+[cmake] CMake Error in CMakeLists.txt:
+[cmake]   Found relative path while evaluating include directories of "expr":
+[cmake]
+[cmake]     "Darwin"
+```
+
+#### 其中之一
+
+就是查询结果就是：如果有其中之一，那么返回 "1"; 否则返回 "0"
+
+```cmake
+target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC
+    "$<PLATFORM_ID: Windows, Linux>"
+)
+```
+
+在我的电脑上，返回 0
+
+### 条件表达式
+
+```cmake
+set(LIB ON)
+target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC
+    "$<IF:$<BOOL:${LIB}>, fuck, you>"
+)
+```
+
+### 目标查询
+
+```cmake
+set(var $<TARGET_FILE:expr>)
+add_custom_target(
+    gen
+    COMMAND ${CMAKE_COMMAND} -E echo "${var}"
+)
+
+```
+
+输出：
+
+```sh
+~/DOCs/cmakeLearn/notes/chap3/301expr (main*) » cmake --build build --target gen
+[ 50%] Building CXX object CMakeFiles/expr.dir/expr.cc.o
+[100%] Linking CXX executable expr
+[100%] Built target expr
+/Users/wangfiox/DOCs/cmakeLearn/notes/chap3/301expr/build/expr
+[100%] Built target gen
+```
+
+## 提示
+
+有时候注意一下错误，比方说重名错误就会有提示：see documentation for policy CMP0002 for more details

@@ -28,7 +28,37 @@ message($< $< NOT:$< BOOL:${LIB}> >:STATIC >)
 # 利用cmake的错误来查看  --> cmake error in cmakelists.txt
 # target_include_directories( ${PROJECT_NAME} PUBLIC "$<AND:1,0>")
 # target_include_directories(${PROJECT_NAME} PUBLIC "$<OR:1,0>")
+# add_custom_target(
+# gen
+# COMMAND ${CMAKE_COMMAND} -E echo "$<$<NOT:$<BOOL:${LIB}>>:STATIC=1>"
+# )
+message(${CMAKE_SYSTEM_NAME})
+
+# target_include_directories(
+# ${PROJECT_NAME}
+# PUBLIC
+# "$<CONFIG>"
+# )
+# target_include_directories(
+# ${PROJECT_NAME}
+# PUBLIC
+# "$<PLATFORM_ID: Darwin>"
+# )
+set(LIB ON)
+
+# target_include_directories(
+# ${PROJECT_NAME}
+# PUBLIC
+# "$<IF:$<BOOL:${LIB}>, fuck, you>"
+# )
+
+# target_include_directories(
+# ${PROJECT_NAME}
+# PUBLIC
+# "$<$<BOOL:ON>:${e}>"
+# )
+set(var $<TARGET_FILE:expr>)
 add_custom_target(
     gen
-    COMMAND ${CMAKE_COMMAND} -E echo "$<$<NOT:$<BOOL:${LIB}>>:STATIC=1>"
+    COMMAND ${CMAKE_COMMAND} -E echo "${var}"
 )
