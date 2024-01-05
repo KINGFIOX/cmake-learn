@@ -431,3 +431,18 @@ set_target_properties(slib PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${OUT_LIB_PATH}/release
 )
 ```
+
+### debug 库名加后缀
+
+```cmake
+set_target_properties(main PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${OUT_EXE_PATH}
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${OUT_EXE_PATH}/debug
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OUT_EXE_PATH}/release
+    DEBUG_POSTFIX "d" # debug版本添加后缀
+)
+```
+
+### pdb 文件的配置 （windows）
+
+### 还有一些是 windows 的，暂时跳过
