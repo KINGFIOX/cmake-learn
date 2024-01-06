@@ -109,6 +109,20 @@ cmake --install build --config Debug
 
 上面的 install 是 TARGETS 的，下面是 FILES
 
+```cmake
+install(<FILES|PROGRAMS> <file>...
+        TYPE <type> | DESTINATION <dir>
+        [PERMISSIONS <permission>...]
+        [CONFIGURATIONS <config>...]
+        [COMPONENT <component>]
+        [RENAME <name>] [OPTIONAL] [EXCLUDE_FROM_ALL])
+```
+
+有两种安装到路径的方式：
+
+1. 指定类型 TYPE
+2. 指定目录 DESTINATION
+
 ### 文件安装到指定目录
 
 ```cmake
@@ -168,4 +182,190 @@ total 0
 -rw-r-----  1 wangfiox  staff     0B Jan  6 14:49 a.h
 ```
 
+注意一下：
+有的操作系统，权限可能不一样。
+windows 只有两种权限：隐藏权限 和 只读权限。
+因为 windows 的可执行权限是用：后缀名 控制的
+
+### cmake install 目录
+
+安装整一个目录：懒得一个一个控制了
+
+```cmake
+set(CMAKE_INSTALL_PREFIX out)
+
+file(WRITE doc/index.html "")
+file(WRITE doc/doc.html "")
+file(WRITE doc/doc.cc "")
+file(WRITE doc/doc.c "")
+
+install(DIRECTORY doc TYPE DOC)
+```
+
+注意：小心目录无限递归
+
+#### 匹配
+
+```cmake
+# 过滤，只复制 *.html 文件
+install(DIRECTORY doc DESTINATION html_doc
+    FILES_MATCHING PATTERN "*.html"
+)
+```
+
+#### 忽略版本控制
+
+```cmake
+# 排除
+install(DIRECTORY doc DESTINATION no_c
+    PATTERN "*.c" EXCLUDE
+)
+```
+
+#### 既想要匹配 又想要忽略
+
+```cmake
+install(DIRECTORY doc DESTINATION and
+    FILES_MATCHING
+    PATTERN "*.cc"
+    PATTERN ".git" EXCLUDE
+)
+```
+
+## 安装时执行程序
+
+我们希望在安装的时候，执行一些东西
+
+这部分代码会在`cmake --install`的时候使用
+
+```cmake
+set(CMAKE_INSTALL_PREFIX out)
+
+file(WRITE a.h "")
+file(WRITE b.h "")
+install(CODE "message(\"begin install\")")
+
+install(FILES a.h TYPE INCLUDE)
+install(CODE "message(\"a.h install success!\")")
+install(FILES b.h TYPE INCLUDE)
+install(CODE "message(\"b.h install success!\")")
+```
+
+输出：
+
+```sh
+~/DOCs/cpp/cmakeLearn/notes/chap5/504code (main*) » cmake --install build
+-- Install configuration: "Debug"
+begin install
+-- Installing: /Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/504code/out/include/a.h
+a.h install success!
+-- Installing: /Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/504code/out/include/b.h
+b.h install success!
+```
+
+### 写入安装时间
+
+```cmake
+install(CODE [=[
+    string(TIMESTAMP now "%Y-%m-%d %H:%M:%S")
+    message(${now})
+    FILE(APPEND install_log.txt "${now}\n")
+]=])
+```
+
+## 安装指定的模块
+
+是一种通用的约定
+
+用到`COMPONENT`（主键）
+
+### ./CMakeLists.txt
+
+```cmake
+set(CMAKE_INSTALL_PREFIX out)
+
+file(WRITE "a.cc" "")
+file(WRITE "doc.html" "")
+
+install(FILES a.cc
+    DESTINATION src
+    COMPONENT src # 定义我们自己的 主键 名称
+)
+
+install(FILES doc.html
+    DESTINATION doc
+    COMPONENT doc
+)
+```
+
+然后我们`cmake -S . -B build`，可以看到 build 目录下有`cmake_install.cmake`
+
+接着我们就可以通过主键安装了
+
+```sh
+cd build && cmake -DCOMPONENT=doc -P cmake_install.cmake
+```
+
 ## 自定义 find_package 可导入库
+
+这个用的很多
+
+两种想法：
+
+1. 给我们的库支持 find_package
+2. 使用别人的库
+
+使用的逻辑（流程）：
+
+1. 先`find_package(slib)`调用
+2. `<PackageName>_FOUND`看看有没有找个这个库
+3. 怎么去找？有两种方式（先会找 module mode，在会找 config mode）
+   1. module mode：会到 cmake_module_path 路径下面，里面有很多 Find<PackageName>.cmake（如果我们要给我们的库支持 find_package，那么就要手写这个.cmake）
+   2. config mode：
+
+### config mode
+
+查找路径：cmake_prefix_path
+
+读取文件：
+
+- config
+
+里面包含了配置参数，这个库的路径，头文件路径等
+
+约定名字的格式：
+
+`<lowercasePackageName>-config.cmake`
+
+`<PackageName>Config.cmake`
+
+- version
+
+`<lowercasePackageName>-config-version`
+
+`<PackageName>ConfigVersion.cmake`
+
+生成 config mode 文件：
+
+- config
+
+```cmake
+install(TARGETS slib
+    EXPORT slib
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION ${CMAKE_SOURCE_DIR} lib
+    PUBLIC_HEADER DESTINATION include
+)
+```
+
+```cmake
+install(EXPORT slib
+    NAMESPACE xcpp::  # 这个是可选项，为了防止库名冲突
+    FILE slibConfig.cmake
+    DESTINATION mod/slib/
+)
+```
+
+- version
+
+###
