@@ -368,4 +368,75 @@ install(EXPORT slib
 
 - version
 
-###
+### 导出 package
+
+这个导出 package，我只能说感觉很坑，详情请看 506 代码
+
+#### 制作库
+
+```cmake
+set(CMAKE_INSTALL_PREFIX "/Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/slib")
+file(WRITE include/slib.h "void SLib();")
+file(WRITE slib.cc " #include xxxx  void SLib() {}")
+add_library(slib STATIC slib.cc)
+set_target_properties(slib PROPERTIES PUBLIC_HEADER include/slib.h)
+target_include_directories(slib PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+```
+
+这里利用了：生成表达式
+
+因为 编译库 和 安装库 的路径是不一样的。他的头文件路径也是会发生改变，因此需要生成表达式控制
+
+#### 导出库 （install）
+
+```cmake
+install(TARGETS slib
+    EXPORT slib # 要标注导出
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include # 记得导出头文件路径
+)
+
+install(EXPORT slib
+    FILE slibConfig.cmake
+    DESTINATION config
+)
+```
+
+### find_package
+
+```cmake
+list(APPEND CMAKE_PREFIX_PATH "/Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/slib")
+
+find_package(slib)
+message("slib_FOUND = ${slib_FOUND}")
+
+add_executable(${PROJECT_NAME} main.cc)
+target_link_libraries(${PROJECT_NAME} slib)
+target_include_directories(${PROJECT_NAME} PRIVATE ${slib_INCLUDE_DIRS})
+message("slib_INCLUDE_DIRS = ${slib_INCLUDE_DIRS}")
+```
+
+这个在我的电脑上并没有成功，我根据报错提示，使用了这个才成功的：
+
+```sh
+# 报错
+  Could not find a package configuration file provided by "slib" with any of
+  the following names:
+
+    slibConfig.cmake
+    slib-config.cmake
+
+  Add the installation prefix of "slib" to CMAKE_PREFIX_PATH or set
+  "slib_DIR" to a directory containing one of the above files.  If "slib"
+  provides a separate development package or SDK, be sure it has been
+  installed.
+```
+
+我手动指定了`slib_DIR`才行的。
+
+find_package 以后，不要忘了链接`target_link_libraries`
