@@ -211,7 +211,7 @@ enable_testing()
 # 执行一个进程
 execute_process(COMMAND <cmd1> [<arguments>]
                 [COMMAND <cmd2> [<arguments>]]...
-                [WORKING_DIRECTORY <directory>]
+                [WORKING_DIRECTORY <directory>]  <--
                 [TIMEOUT <seconds>]
                 [RESULT_VARIABLE <variable>]
                 [RESULTS_VARIABLE <variable>]
@@ -231,4 +231,91 @@ execute_process(COMMAND <cmd1> [<arguments>]
                 [COMMAND_ERROR_IS_FATAL <ANY|LAST>])
 ```
 
-###
+#### 示例 1 - 解压库
+
+```cmake
+# 解压文件
+# cmake -E 执行 shell 命令
+# PROJECT_BINARY_DIR 就是 -B build 对应的目录
+execute_process(COMMAND ${CMAKE_COMMAND}
+    -E tar xf ${CMAKE_SOURCE_DIR}/gtest-1.11.0.tar.gz
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+)
+
+# cmake配置
+set(gtest ${PROJECT_BINARY_DIR}/googletest-release-1.11.0)
+execute_process(COMMAND
+    ${CMAKE_COMMAND} -S ${gtest} -B ${gtest}/build
+)
+
+# 编译gtest
+execute_process(COMMAND
+    ${CMAKE_COMMAND} --build ${gtest}/build
+)
+
+set(GTEST_INSTALL ${CMAKE_SOURCE_DIR}/gtest)
+
+# install
+execute_process(COMMAND
+    ${CMAKE_COMMAND} --install ${gtest}/build --prefix=${GTEST_INSTALL}
+)
+```
+
+我们 对 gtest 库 做了几件事情：
+
+1. `cmake -S . -B build`生成
+2. 编译`cmake --build build`
+3. 安装`cmake --install build`
+
+#### 链接
+
+```cmake
+# 生成我们自己的 exe
+add_executable(${PROJECT_NAME} "${PROJECT_NAME}.cc")
+
+# 查找gtest库
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/gtest")
+find_package(GTest)
+
+message("GTest = ${GTest_FOUND}")
+```
+
+#### 使用 gtest
+
+```cmake
+# 联合ctest和gtest
+include(GoogleTest)
+gtest_discover_tests(${PROJECT_NAME})
+
+enable_testing()
+```
+
+#### 防止没必要的重复安装 --> 加一个 if 判断
+
+```cmake
+set(GTEST_INSTALL ${CMAKE_SOURCE_DIR}/gtest)
+
+# 如果没有安装才执行：解压，编译，安装
+if(NOT EXISTS GTEST_INSTALL)
+    execute_process(COMMAND ${CMAKE_COMMAND}
+        -E tar xf ${CMAKE_SOURCE_DIR}/gtest-1.11.0.tar.gz
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+    )
+    set(gtest ${PROJECT_BINARY_DIR}/googletest-release-1.11.0)
+    execute_process(COMMAND
+        ${CMAKE_COMMAND} -S ${gtest} -B ${gtest}/build
+    )
+    execute_process(COMMAND
+        ${CMAKE_COMMAND} --build ${gtest}/build
+    )
+    execute_process(COMMAND
+        ${CMAKE_COMMAND} --install ${gtest}/build --prefix=${GTEST_INSTALL}
+    )
+endif(NOT EXISTS GTEST_INSTALL)
+```
+
+## gtest 针对类型 做测试
+
+```cpp
+
+```
