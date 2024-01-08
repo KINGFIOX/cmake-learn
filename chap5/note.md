@@ -440,3 +440,7 @@ message("slib_INCLUDE_DIRS = ${slib_INCLUDE_DIRS}")
 我手动指定了`slib_DIR`才行的。
 
 find_package 以后，不要忘了链接`target_link_libraries`
+
+## 多版本自定义 package 共存
+
+多版本，暂时跳过，这个 51cto 平台的视频播放器，有点毒

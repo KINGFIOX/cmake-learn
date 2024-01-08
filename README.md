@@ -1,6 +1,6 @@
 # README
 
-花血本买了一个课程（439），夏曹俊老师的 cmake，
+花血本买了一个课程（439），夏曹俊老师的 cmake，链接： https://edu.51cto.com/lesson/848368.html，
 这个仓库里是相关的笔记，以及 workspace。
 
 cmake 之前看了 cmake cookbook，gnu makefile 的一些书，
