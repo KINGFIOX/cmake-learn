@@ -443,4 +443,47 @@ find_package 以后，不要忘了链接`target_link_libraries`
 
 ## 多版本自定义 package 共存
 
-多版本，暂时跳过，这个 51cto 平台的视频播放器，有点毒
+```cmake
+# 配置version（替换文件中的version）
+configure_file("slib.cc.in" "${CMAKE_SOURCE_DIR}/slib.cc")
+```
+
+如果我们传入`cmake -S . -B build -Dversion=1.1`
+
+然后在`cmake --install build`的时候可以看到：
+
+```sh
+~/DOCs/cpp/cmakeLearn/notes/chap5/508version (main*) » cmake --install build
+-- Install configuration: "Debug"
+-- Installing: /Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/slib-1.1/lib/libslib.a
+-- Installing: /Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/slib-1.1/include/slib.h
+-- Installing: /Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/slib-1.1/config/slibConfig.cmake
+-- Installing: /Users/wangfiox/DOCs/cpp/cmakeLearn/notes/chap5/slib-1.1/config/slibConfig-debug.cmake
+```
+
+### 如何多版本共存？
+
+可以通过给路径明明解决：`slib-${version}`，这样就允许多版本的存在了
+
+那么还有问题，就是我 find_package 会不会找到相应的版本呢？
+
+```cmake
+find_package(slib ${version})
+```
+
+### 导出版本号信息
+
+```cmake
+install(
+    EXPORT slib
+    FILE slibConfig.cmake DESTINATION config/slib-${version}/
+)
+
+# 写入版本号信息
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    ${CMAKE_INSTALL_PREFIX}/config/slib-${version}/sliConfigVersion.cmake
+    VERSION ${version}
+    COMPATIBILITY SameMajorVersion # 版本兼容问题：大版本是兼容的
+)
+```

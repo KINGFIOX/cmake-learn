@@ -316,6 +316,8 @@ endif(NOT EXISTS GTEST_INSTALL)
 
 ## gtest 针对类型 做测试
 
+<!-- TODO 这里确实没太深入。感觉这个还挺有意思的。 -->
+
 ```cpp
 
 ```
