@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 3.22)
 project(xlog)
 
+set(version 1.0)
+
 # 当前cmake路径的txt
 # 注意是当前的路径，而不是cmake_source_dir（这个可能是父目录的）
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR} SRC)
@@ -99,10 +101,17 @@ install(
 install(
     EXPORT ${PROJECT_NAME} # 设置这一行的同时，不要忘记设置安装库的export
     FILE ${PROJECT_NAME}Config.cmake
-    DESTINATION lib/config/
+    DESTINATION lib/config/${PROJECT_NAME}-${version}
 )
 
 # 支持版本文件
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
+    ${CMAKE_CURRENT_LIST_DIR}/../../lib/${PROJECT_NAME}-${version}/${PROJECT_NAME}ConfigVersion.cmake
+    VERSION ${version}
+    COMPATIBILITY SameMajorVersion # 版本兼容问题
+)
+
+install(
+    FILES ${CMAKE_CURRENT_LIST_DIR}/../../lib/${PROJECT_NAME}ConfigVersion.cmake DESTINATION lib/config
 )
